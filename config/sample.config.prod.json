@@ -1,0 +1,32 @@
+{
+	"server":{
+		"port":80,
+		"name":"sample.com",
+		"privateKeyName":"sample.key",
+		"publicKeyName":"sample.key.pub"
+	},
+	"smtp":{
+		"host":"sample.com",
+		"port":587,
+		"user":"sample",
+		"password":"sample",
+		"fromName":"No Reply",
+		"fromAddress":"noreply@sample.com"
+	},
+	"notifications":{
+		"keyName":"AuthKey_sample.p8",
+		"keyId":"sample",
+		"teamId":"sample",
+		"topic":"sample",
+		"production":false
+	},
+	"uris":{
+		"passwordReset":"https://sample.com/pwreset",
+		"oauthRedirect":"oauth-swift://oauth-callback/"
+	},
+	"templates":{
+		"passwordResetForm":"pwreset.mustache",
+		"passwordResetOk":"pwreset.ok.mustache",
+		"passwordResetError":"pwreset.error.mustache"
+	}
+}

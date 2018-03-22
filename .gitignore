@@ -65,3 +65,8 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
+.DS_Store
+config/config.prod.json
+config/config.dev.json
+Package.resolved
+*.xcodeproj/

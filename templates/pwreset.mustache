@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Password Reset</title>
+</head>
+<body>
+A request to reset the password of <b>{{address}}</b> was received from the app.
+<p>
+<form method="POST" action="/pwreset/complete">
+<input type="hidden" name="authToken" value="{{token}}">
+<input type="hidden" name="address" value="{{address}}">
+<input type="password" name="password"><br>
+<input type="submit" name="submit" value="Submit">
+</form>
+</p>
+</body>
+</html>
