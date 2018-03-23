@@ -68,5 +68,8 @@ fastlane/test_output
 .DS_Store
 config/config.prod.json
 config/config.dev.json
+config/*.p8
+config/*.key
+config/*.pub
 Package.resolved
 *.xcodeproj/
