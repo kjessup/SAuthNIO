@@ -103,7 +103,7 @@ extension Config.Database {
 		}
 	}
 	func configuration() throws -> PostgresDatabaseConfiguration {
-		return try PostgresDatabaseConfiguration(database: "postgres", host: host, port: port, username: user, password: password)
+		return try PostgresDatabaseConfiguration(database: name, host: host, port: port, username: user, password: password)
 	}
 	func crud() throws -> Database<PostgresDatabaseConfiguration> {
 		return Database(configuration: try configuration())
