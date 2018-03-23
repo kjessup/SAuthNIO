@@ -8,8 +8,6 @@ import SAuthCodables
 import SAuthLib
 @testable import SAuth
 
-let postgresTestDBName = "testing123"
-let postgresInitConnInfo = "host=localhost dbname=postgres"
 let postgresTestConnInfo = "host=localhost dbname=testing123"
 
 let privKeyString = """
