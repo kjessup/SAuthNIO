@@ -9,6 +9,7 @@ import PerfectLib
 import PerfectCrypto
 import PerfectSMTP
 import SAuthLib
+import SAuthCodables
 
 let globalConfig = try Config.get()
 let serverPublicKeyStr = try File("\(configDir)\(globalConfig.server.publicKeyName)").readString()

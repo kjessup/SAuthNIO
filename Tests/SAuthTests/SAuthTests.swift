@@ -4,8 +4,9 @@ import Foundation
 import PerfectCRUD
 import PerfectCrypto
 import PerfectPostgreSQL
-import SwiftCodables
-@testable import SAuthLib
+import SAuthCodables
+import SAuthLib
+@testable import SAuth
 
 let postgresTestDBName = "testing123"
 let postgresInitConnInfo = "host=localhost dbname=postgres"
@@ -82,7 +83,7 @@ hORLXx/oFmkXQ8YZB41hKZn828bfBwJxIqeb5PEXKB4zfxWlszvPZ5nYlmKeF+Tx
 -----END PUBLIC KEY-----
 """
 
-struct SAuthTestDBProvider: SAuthConfigProvider {
+struct SAuthTestDBProvider: SAuthLib.SAuthConfigProvider {
 	func getDB() throws -> Database<PostgresDatabaseConfiguration> {
 		return Database(configuration: try PostgresDatabaseConfiguration(postgresTestConnInfo))
 	}
@@ -92,6 +93,11 @@ struct SAuthTestDBProvider: SAuthConfigProvider {
 	func getServerPublicKey() throws -> PEMKey {
 		return try PEMKey(source: pubKeyString)
 	}
+	func getPushConfigurationName(forType: String) throws -> String { return "stub" }
+	func getPushConfigurationTopic(forType: String) throws -> String { return "stub" }
+	func sendEmailPasswordReset(authToken: String, account: Account, alias: AliasBrief) throws {}
+	func getTemplatePath(_ key: TemplateKey) throws -> String { return "stub" }
+	func getURI(_ key: URIKey) throws -> String { return "stub" }
 }
 
 class SAuthLibTests: XCTestCase {
@@ -101,11 +107,11 @@ class SAuthLibTests: XCTestCase {
 	}
 	
 	func testSAuth() {
-		let un = "badthing@gmail.com"
+		let un = "foo@gmail.com"
 		let pw = "wqo[kdowqk"
-		let un2 = "b.adthing@gmail.com"
+		let un2 = "f.oo@gmail.com"
 		let pw2 = "23oihfqoih"
-		let un3 = "ba.dthing@gmail.com"
+		let un3 = "fo.o@gmail.com"
 		do {
 			let s = SAuth(SAuthTestDBProvider())
 			try s.initialize()

@@ -6,21 +6,19 @@ import PackageDescription
 let package = Package(
 	name: "SAuth",
 	products: [
-		.executable(name: "SAuth", targets: ["SAuth"]),
-		.library(name: "SAuthLib", targets: ["SAuthLib"])
+		.executable(name: "SAuth", targets: ["SAuth"])
 	],
 	dependencies: [
 		.package(url: "https://github.com/kjessup/Perfect-PostgreSQL.git", .branch("master")),
+		.package(url: "https://github.com/kjessup/SAuthCodables.git", .branch("master")),
+		.package(url: "https://github.com/kjessup/SAuthLib.git", .branch("master")),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", from: "3.0.10"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-CloudFormation.git", from: "0.0.0"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-Notifications.git", from: "3.0.0"),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-CURL.git", from: "3.0.6"),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-SMTP.git", from: "3.2.0"),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-Mustache.git", from: "3.0.0")
+		.package(url: "https://github.com/PerfectlySoft/Perfect-SMTP.git", from: "3.2.0")
 	],
 	targets: [
-		.target(name: "SAuth", dependencies: ["SAuthLib", "PerfectNotifications", "PerfectPostgreSQL"]),
-		.target(name: "SAuthLib", dependencies: ["PerfectMustache", "PerfectSMTP", "PerfectCURL", "PerfectHTTPServer", "PerfectCloudFormation", "PerfectNotifications"]),
-		.testTarget(name: "SAuthLibTests", dependencies: ["SAuthLib"])
+		.target(name: "SAuth", dependencies: ["SAuthLib", "PerfectNotifications", "PerfectPostgreSQL", "SAuthCodables", "PerfectHTTPServer", "PerfectCloudFormation"]),
+		.testTarget(name: "SAuthTests", dependencies: ["SAuth", "SAuthLib"])
 	]
 )

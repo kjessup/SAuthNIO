@@ -13,6 +13,7 @@ import PerfectCrypto
 import PerfectSMTP
 import PerfectLib
 import SAuthLib
+import SAuthCodables
 
 let configDir = "./config/"
 let templatesDir = "./templates/"
