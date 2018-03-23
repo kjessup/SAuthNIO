@@ -100,7 +100,7 @@ struct SAuthTestDBProvider: SAuthLib.SAuthConfigProvider {
 	func getURI(_ key: URIKey) throws -> String { return "stub" }
 }
 
-class SAuthLibTests: XCTestCase {
+class SAuthTests: XCTestCase {
 	
 	override func setUp() {
 		super.setUp()
@@ -169,13 +169,12 @@ class SAuthLibTests: XCTestCase {
 				XCTAssertEqual(alias22.account, alias.account)
 			}
 			
-			
 		} catch {
 			XCTFail("\(error)")
 		}
 	}
 
-    static var allTests: [(String, (SAuthLibTests) -> () throws -> Void)] {
+    static var allTests: [(String, (SAuthTests) -> () throws -> Void)] {
         return [
 			("testSAuth", testSAuth)
         ]
