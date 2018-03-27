@@ -27,6 +27,7 @@
 	"templates":{
 		"passwordResetForm":"pwreset.mustache",
 		"passwordResetOk":"pwreset.ok.mustache",
-		"passwordResetError":"pwreset.error.mustache"
+		"passwordResetError":"pwreset.error.mustache",
+		"passwordResetEmail":"pwreset.email.mustache"
 	}
 }

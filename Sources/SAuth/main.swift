@@ -8,6 +8,7 @@ import PerfectCRUD
 import PerfectLib
 import PerfectCrypto
 import PerfectSMTP
+import PerfectMustache
 import SAuthLib
 import SAuthCodables
 
@@ -34,17 +35,31 @@ struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
 		email.subject = "Password Reset"
 		email.to = [.init(name: fullName, address: alias.address)]
 		email.from = .init(name: smtp.fromName, address: smtp.fromAddress)
-		email.text =
-		"""
+		if let emailTemplate = globalConfig.templates?.passwordResetEmail {
+			do {
+				let map: [String:Any] = ["fullName":fullName, "uri":uri, "authToken":authToken]
+				let ctx = MustacheEvaluationContext(templatePath: emailTemplate, map: map)
+				let collector = MustacheEvaluationOutputCollector()
+				email.text = try ctx.formulateResponse(withCollector: collector)
+			} catch {
+				email.text = plainResetEmailBody(fullName: fullName, uri: uri, authToken: authToken)
+			}
+		} else {
+			email.text = plainResetEmailBody(fullName: fullName, uri: uri, authToken: authToken)
+		}
+		try email.send()
+	}
+	
+	func plainResetEmailBody(fullName: String, uri: String, authToken: String) -> String {
+		return """
 		Hello, \(fullName). Here is your requested password reset link:
 		\(uri)/\(authToken)
 		
 		This link will expire in fifteen minutes.
 		
 		Sincerely,
-			Authentication Server
+		Authentication Server
 		"""
-		try email.send()
 	}
 	
 	func getDB() throws -> Database<PostgresDatabaseConfiguration> {

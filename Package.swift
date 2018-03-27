@@ -15,10 +15,11 @@ let package = Package(
 		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", from: "3.0.10"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-CloudFormation.git", from: "0.0.0"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-Notifications.git", from: "3.0.0"),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-SMTP.git", from: "3.2.0")
+		.package(url: "https://github.com/PerfectlySoft/Perfect-SMTP.git", from: "3.2.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-Mustache.git", from: "3.0.1")
 	],
 	targets: [
-		.target(name: "SAuth", dependencies: ["SAuthLib", "PerfectNotifications", "PerfectPostgreSQL", "SAuthCodables", "PerfectHTTPServer", "PerfectCloudFormation"]),
+		.target(name: "SAuth", dependencies: ["SAuthLib", "PerfectNotifications", "PerfectPostgreSQL", "PerfectMustache", "SAuthCodables", "PerfectHTTPServer", "PerfectCloudFormation"]),
 		.testTarget(name: "SAuthTests", dependencies: ["SAuth", "SAuthLib"])
 	]
 )

@@ -63,6 +63,7 @@ struct Config: Codable {
 		let passwordResetForm: String
 		let passwordResetOk: String
 		let passwordResetError: String
+		let passwordResetEmail: String?
 	}
 	let server: Server
 	let smtp: SMTP?
