@@ -50,6 +50,7 @@ struct Config: Codable {
 	}
 	struct URIs: Codable {
 		let passwordReset: String?
+		let accountValidate: String?
 		let oauthRedirect: String?
 	}
 	struct Database: Codable {
@@ -64,6 +65,9 @@ struct Config: Codable {
 		let passwordResetOk: String
 		let passwordResetError: String
 		let passwordResetEmail: String?
+		let accountValidationEmail: String?
+		let accountValidationError: String?
+		let accountValidationOk: String?
 	}
 	let server: Server
 	let smtp: SMTP?

@@ -18,16 +18,20 @@
 		"keyId":"sample",
 		"teamId":"sample",
 		"topic":"sample",
-		"production":false
+		"production":true
 	},
 	"uris":{
 		"passwordReset":"https://sample.com/pwreset",
+		"accountValidate":"https://sample.com/validate",
 		"oauthRedirect":"oauth-swift://oauth-callback/"
 	},
 	"templates":{
 		"passwordResetForm":"pwreset.mustache",
 		"passwordResetOk":"pwreset.ok.mustache",
 		"passwordResetError":"pwreset.error.mustache",
-		"passwordResetEmail":"pwreset.email.mustache"
+		"passwordResetEmail":"pwreset.email.mustache",
+		"accountValidationEmail":"validate.email.mustache",
+		"accountValidationError":"validate.error.mustache",
+		"accountValidationOk":"validate.ok.mustache"
 	}
 }

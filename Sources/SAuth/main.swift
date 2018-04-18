@@ -18,6 +18,38 @@ let serverPublicKey = try PEMKey(source: serverPublicKeyStr)
 let serverPrivateKey = try PEMKey(pemPath: "\(configDir)\(globalConfig.server.privateKeyName)")
 
 struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
+	func sendEmailValidation(authToken: String, account: Account, alias: AliasBrief) throws {
+		guard let smtp = globalConfig.smtp else {
+			throw SAuthError(description: "SMTP is not configured.")
+		}
+		guard let uri = globalConfig.uris.accountValidate else {
+			throw SAuthError(description: "Account validation is not configured.")
+		}
+		let client = SMTPClient(url: "smtp://\(smtp.host):\(smtp.port)",
+			username: smtp.user,
+			password: smtp.password,
+			requiresTLSUpgrade: true)
+		let email = EMail(client: client)
+		let address = alias.address
+		email.connectTimeoutSeconds = 7
+		email.subject = "Account Validation"
+		email.to = [.init(address: address)]
+		email.from = .init(name: smtp.fromName, address: smtp.fromAddress)
+		if let emailTemplate = globalConfig.templates?.accountValidationEmail {
+			do {
+				let map: [String:Any] = ["address":address, "uri":uri, "authToken":authToken]
+				let ctx = MustacheEvaluationContext(templatePath: emailTemplate, map: map)
+				let collector = MustacheEvaluationOutputCollector()
+				email.text = try ctx.formulateResponse(withCollector: collector)
+			} catch {
+				email.text = plainValidateAccountBody(address: address, uri: uri, authToken: authToken)
+			}
+		} else {
+			email.text = plainValidateAccountBody(address: address, uri: uri, authToken: authToken)
+		}
+		try email.send()
+	}
+	
 	func sendEmailPasswordReset(authToken: String, account: Account, alias: AliasBrief) throws {
 		guard let smtp = globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
@@ -62,6 +94,16 @@ struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
 		"""
 	}
 	
+	func plainValidateAccountBody(address: String, uri: String, authToken: String) -> String {
+		return """
+		Hello, an account was created for this address "\(address)". Follow this link to validate your account:
+		\(uri)/\(authToken)
+		
+		Sincerely,
+		Authentication Server
+		"""
+	}
+	
 	func getDB() throws -> Database<PostgresDatabaseConfiguration> {
 		guard let db = try globalConfig.database?.crud() else {
 			throw SAuthError(description: "Database is not configured.")
@@ -96,6 +138,14 @@ struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
 			path = globalConfig.templates?.passwordResetOk
 		case .passwordResetError:
 			path = globalConfig.templates?.passwordResetError
+		case .passwordResetEmail:
+			path = globalConfig.templates?.passwordResetEmail
+		case .accountValidationEmail:
+			path = globalConfig.templates?.accountValidationEmail
+		case .accountValidationError:
+			path = globalConfig.templates?.accountValidationError
+		case .accountValidationOk:
+			path = globalConfig.templates?.accountValidationOk
 		}
 		guard let p = path else {
 			throw SAuthError(description: "The template \(key) is not defined.")
@@ -108,6 +158,10 @@ struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
 		switch key {
 		case .oauthRedirect:
 			path = globalConfig.uris.oauthRedirect
+		case .passwordReset:
+			path = globalConfig.uris.passwordReset
+		case .accountValidate:
+			path = globalConfig.uris.accountValidate
 		}
 		guard let p = path else {
 			throw SAuthError(description: "The URI \(key) is not defined.")
@@ -144,6 +198,8 @@ authRoutes.add(method: .post, uri: "mobile/add", handler: sAuthHandlers.addMobil
 
 routes.add(method: .get, uri: "/pwreset/{token}", handler: sAuthHandlers.pwResetWeb)
 routes.add(method: .post, uri: "/pwreset/complete", handler: sAuthHandlers.pwResetWebComplete)
+
+routes.add(method: .get, uri: "/validate/{token}", handler: sAuthHandlers.accountValidateWeb)
 
 routes.add(authRoutes)
 routes.add(TRoute(method: .get, uri: "/healthcheck", handler: healthCheck))

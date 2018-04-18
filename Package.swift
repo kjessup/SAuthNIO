@@ -9,7 +9,7 @@ let package = Package(
 		.executable(name: "SAuth", targets: ["SAuth"])
 	],
 	dependencies: [
-		.package(url: "https://github.com/kjessup/Perfect-PostgreSQL.git", .branch("master")),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-PostgreSQL.git", from: "3.1.0"),
 		.package(url: "https://github.com/kjessup/SAuthCodables.git", .branch("master")),
 		.package(url: "https://github.com/kjessup/SAuthLib.git", .branch("master")),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", from: "3.0.10"),

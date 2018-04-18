@@ -72,4 +72,7 @@ config/*.p8
 config/*.key
 config/*.pub
 Package.resolved
+Packages/
+*.paw
+
 *.xcodeproj/
