@@ -6,6 +6,7 @@
 <body>
 A request to reset the password of <b>{{address}}</b> was received from the app.
 <p>
+Enter your new password:<br>
 <form method="POST" action="/pwreset/complete">
 <input type="hidden" name="authToken" value="{{token}}">
 <input type="hidden" name="address" value="{{address}}">

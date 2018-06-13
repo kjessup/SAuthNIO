@@ -75,6 +75,7 @@ struct Config: Codable {
 	let uris: URIs
 	var database: Database?
 	let templates: Templates?
+	var databaseName: String?
 	
 	static func get() throws -> Config {
 		let f = File(configFilePath)
@@ -86,7 +87,7 @@ struct Config: Codable {
 			}
 			config.database = Config.Database(host: pgsql.hostName,
 											  port: pgsql.hostPort,
-											  name: sAuthDatabaseName,
+											  name: config.databaseName ?? sAuthDatabaseName,
 											  user: pgsql.userName,
 											  password: pgsql.password)
 		}
