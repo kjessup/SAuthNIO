@@ -1,6 +1,6 @@
 import XCTest
-@testable import SAuthTests
+@testable import SAuthNIOTests
 
 XCTMain([
-     testCase(SAuthTests.allTests),
+     testCase(SAuthNIOTests.allTests),
 ])
