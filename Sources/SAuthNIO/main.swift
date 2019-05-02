@@ -1,15 +1,14 @@
 
 import Foundation
 import PerfectCloudFormation
-import PerfectHTTPServer
-import PerfectHTTP
+import PerfectNIO
 import PerfectPostgreSQL
 import PerfectCRUD
 import PerfectLib
 import PerfectCrypto
 import PerfectSMTP
 import PerfectMustache
-import SAuthLib
+import SAuthNIOLib
 import SAuthCodables
 
 let globalConfig = try Config.get()
@@ -17,7 +16,22 @@ let serverPublicKeyStr = try File("\(configDir)\(globalConfig.server.publicKeyNa
 let serverPublicKey = try PEMKey(source: serverPublicKeyStr)
 let serverPrivateKey = try PEMKey(pemPath: "\(configDir)\(globalConfig.server.privateKeyName)")
 
-struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
+private extension Config.SMTP {
+	func email(subject: String, to: [Recipient], from: Recipient) -> EMail {
+		let client = SMTPClient(url: "smtp://\(host):\(port)",
+			username: user,
+			password: password,
+			requiresTLSUpgrade: true)
+		let email = EMail(client: client)
+		email.connectTimeoutSeconds = 7
+		email.subject = subject
+		email.to = to
+		email.from = from
+		return email
+	}
+}
+
+struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 	func sendEmailValidation(authToken: String, account: Account, alias: AliasBrief) throws {
 		guard let smtp = globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
@@ -25,16 +39,10 @@ struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
 		guard let uri = globalConfig.uris.accountValidate else {
 			throw SAuthError(description: "Account validation is not configured.")
 		}
-		let client = SMTPClient(url: "smtp://\(smtp.host):\(smtp.port)",
-			username: smtp.user,
-			password: smtp.password,
-			requiresTLSUpgrade: true)
-		let email = EMail(client: client)
 		let address = alias.address
-		email.connectTimeoutSeconds = 7
-		email.subject = "Account Validation"
-		email.to = [.init(address: address)]
-		email.from = .init(name: smtp.fromName, address: smtp.fromAddress)
+		let email = smtp.email(subject: "Account Validation",
+							   to: [.init(address: address)],
+							   from: .init(name: smtp.fromName, address: smtp.fromAddress))
 		if let emailTemplate = globalConfig.templates?.accountValidationEmail {
 			do {
 				let map: [String:Any] = ["address":address, "uri":uri, "authToken":authToken]
@@ -58,15 +66,9 @@ struct SAuthConfigProvider: SAuthLib.SAuthConfigProvider {
 			throw SAuthError(description: "Password reset is not configured.")
 		}
 		let fullName = account.meta?.fullName ?? ""
-		let client = SMTPClient(url: "smtp://\(smtp.host):\(smtp.port)",
-			username: smtp.user,
-			password: smtp.password,
-			requiresTLSUpgrade: true)
-		let email = EMail(client: client)
-		email.connectTimeoutSeconds = 7
-		email.subject = "Password Reset"
-		email.to = [.init(name: fullName, address: alias.address)]
-		email.from = .init(name: smtp.fromName, address: smtp.fromAddress)
+		let email = smtp.email(subject: "Password Reset",
+							   to: [.init(name: fullName, address: alias.address)],
+							   from: .init(name: smtp.fromName, address: smtp.fromAddress))
 		if let emailTemplate = globalConfig.templates?.passwordResetEmail {
 			do {
 				let map: [String:Any] = ["fullName":fullName, "uri":uri, "authToken":authToken]
@@ -182,39 +184,91 @@ func healthCheck(request: HTTPRequest) throws -> HealthCheckResponse {
 	return HealthCheckResponse(health: "OK")
 }
 
-var routes = Routes()
-routes.add(TRoute(method: .post, uri: "/api/v1/register", handler: sAuthHandlers.register))
-routes.add(TRoute(method: .get, uri: "/api/v1/login", handler: sAuthHandlers.login))
-routes.add(TRoute(method: .get, uri: "/api/v1/passreset", handler: sAuthHandlers.initiatePasswordReset))
-routes.add(TRoute(method: .post, uri: "/api/v1/passreset", handler: sAuthHandlers.completePasswordReset))
-routes.add(TRoute(method: .get, uri: "/api/v1/oauth/upgrade/{provider}/{token}", handler: oauthHandlers.oauthLoginHandler))
-routes.add(method: .get, uri: "/api/v1/oauth/return/{provider}", handler: oauthHandlers.oauthReturnHandler)
+let apiRoutes: Routes<HTTPRequest, HTTPOutput>
+do {
+	let apiGetRoutes = try root().GET.dir{[
+		
+		$0.login.decode(AuthAPI.LoginRequest.self, sAuthHandlers.login).json(),
+		$0.passreset.decode(AuthAPI.PasswordResetRequest.self, sAuthHandlers.initiatePasswordReset).json()
+		
+		] as [Routes<HTTPRequest, HTTPOutput>]}
 
-var authRoutes = TRoutes(baseUri: "/api/v1/a/", handler: sAuthHandlers.authenticated)
-authRoutes.add(method: .get, uri: "mydata", handler: sAuthHandlers.getMeMeta)
-authRoutes.add(method: .post, uri: "mydata", handler: sAuthHandlers.setMeMeta)
-authRoutes.add(method: .get, uri: "me", handler: sAuthHandlers.getMe)
-authRoutes.add(method: .post, uri: "mobile/add", handler: sAuthHandlers.addMobileDevice)
+	let apiPostRoutes = try root().POST.dir{[
+		
+		$0.register.decode(AuthAPI.RegisterRequest.self, sAuthHandlers.register).json(),
+		$0.passreset.decode(AuthAPI.PasswordResetCompleteRequest.self, sAuthHandlers.completePasswordReset).json()
+		
+		] as [Routes<HTTPRequest, HTTPOutput>]}
 
-routes.add(method: .get, uri: "/pwreset/{token}", handler: sAuthHandlers.pwResetWeb)
-routes.add(method: .post, uri: "/pwreset/complete", handler: sAuthHandlers.pwResetWebComplete)
+	let apiOAuthRoutes = try root().GET.oauth.dir{[
+		
+		$0.upgrade.wild(name: "provider").wild(name: "token").decode(OAuthProviderAndToken.self, oauthHandlers.oauthLoginHandler).json(),
+		$0.return.wild(name: "provider").decode(AuthAPI.PasswordResetCompleteRequest.self, sAuthHandlers.completePasswordReset).json()
+		
+		] as [Routes<HTTPRequest, HTTPOutput>]}
 
-routes.add(method: .get, uri: "/validate/{token}", handler: sAuthHandlers.accountValidateWeb)
+	let apiPublicKeyRoutes: Routes<HTTPRequest, HTTPOutput> = root().key { return TextOutput(serverPublicKeyStr) }
 
-routes.add(authRoutes)
-routes.add(TRoute(method: .get, uri: "/healthcheck", handler: healthCheck))
-routes.add(method: .get, uri: "/api/v1/key") {
-	req, resp in
-	resp.addHeader(.contentType, value: "text/plain")
-	resp.setBody(string: serverPublicKeyStr)
-		.completed(status: .ok)
+	let authenticatedRoutes = try root().a(sAuthHandlers.authenticated).dir{[
+		
+		$0.GET.mydata(sAuthHandlers.getMeMeta).json(),
+		$0.POST.mydata.decode(AccountPublicMeta.self, sAuthHandlers.setMeMeta).json(),
+		$0.GET.me(sAuthHandlers.getMe).json(),
+		$0.POST.mobile.add.decode(AuthAPI.AddMobileDeviceRequest.self, sAuthHandlers.addMobileDevice).json()
+		
+		] as [Routes<AuthenticatedRequest, HTTPOutput>]}
+
+	apiRoutes = try root().api.v1.dir([apiGetRoutes, apiPostRoutes, apiOAuthRoutes, apiPublicKeyRoutes, authenticatedRoutes])
 }
-func fileNotFound(req: HTTPRequest, resp: HTTPResponse) {
-	print("404 " + req.path)
-	resp.completed(status: .notFound)
-}
-routes.add(uri: "/**", handler: fileNotFound)
+let pwResetWebRoutes = try root().pwreset.dir{[
+	
+	$0.GET.wild(name: "token").map(sAuthHandlers.pwResetWeb),
+	$0.POST.complete.decode(AuthAPI.PasswordResetCompleteRequest.self, sAuthHandlers.pwResetWebComplete)
+	
+	] as [Routes<HTTPRequest, HTTPOutput>]}
 
-try HTTPServer.launch(.server(name: globalConfig.server.name, port: globalConfig.server.port, routes: routes))
+let accountValidateRoutes = root().validate.wild(name: "token").map(sAuthHandlers.accountValidateWeb) as Routes<HTTPRequest, HTTPOutput>
 
+let healthCheckRoutes = root().healthcheck(healthCheck).json()
+
+let routes = try root().dir([apiRoutes, pwResetWebRoutes, accountValidateRoutes, healthCheckRoutes])
+
+try routes.bind(port: globalConfig.server.port).listen().wait()
+
+
+//var routes = Routes()
+//routes.add(TRoute(method: .post, uri: "/api/v1/register", handler: sAuthHandlers.register))
+//routes.add(TRoute(method: .get, uri: "/api/v1/login", handler: sAuthHandlers.login))
+//routes.add(TRoute(method: .get, uri: "/api/v1/passreset", handler: sAuthHandlers.initiatePasswordReset))
+//routes.add(TRoute(method: .post, uri: "/api/v1/passreset", handler: sAuthHandlers.completePasswordReset))
+
+//routes.add(TRoute(method: .get, uri: "/api/v1/oauth/upgrade/{provider}/{token}", handler: oauthHandlers.oauthLoginHandler))
+//routes.add(method: .get, uri: "/api/v1/oauth/return/{provider}", handler: oauthHandlers.oauthReturnHandler)
+//
+//var authRoutes = TRoutes(baseUri: "/api/v1/a/", handler: sAuthHandlers.authenticated)
+//authRoutes.add(method: .get, uri: "mydata", handler: sAuthHandlers.getMeMeta)
+//authRoutes.add(method: .post, uri: "mydata", handler: sAuthHandlers.setMeMeta)
+//authRoutes.add(method: .get, uri: "me", handler: sAuthHandlers.getMe)
+//authRoutes.add(method: .post, uri: "mobile/add", handler: sAuthHandlers.addMobileDevice)
+//
+//routes.add(method: .get, uri: "/pwreset/{token}", handler: sAuthHandlers.pwResetWeb)
+//routes.add(method: .post, uri: "/pwreset/complete", handler: sAuthHandlers.pwResetWebComplete)
+//
+//routes.add(method: .get, uri: "/validate/{token}", handler: sAuthHandlers.accountValidateWeb)
+//
+//routes.add(authRoutes)
+//routes.add(TRoute(method: .get, uri: "/healthcheck", handler: healthCheck))
+//routes.add(method: .get, uri: "/api/v1/key") {
+//	req, resp in
+//	resp.addHeader(.contentType, value: "text/plain")
+//	resp.setBody(string: serverPublicKeyStr)
+//		.completed(status: .ok)
+//}
+//func fileNotFound(req: HTTPRequest, resp: HTTPResponse) {
+//	print("404 " + req.path)
+//	resp.completed(status: .notFound)
+//}
+//routes.add(uri: "/**", handler: fileNotFound)
+//
+//try HTTPServer.launch(.server(name: globalConfig.server.name, port: globalConfig.server.port, routes: routes))
 

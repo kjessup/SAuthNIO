@@ -12,7 +12,7 @@ import PerfectCRUD
 import PerfectCrypto
 import PerfectSMTP
 import PerfectLib
-import SAuthLib
+import SAuthNIOLib
 import SAuthCodables
 
 let configDir = "./config/"
@@ -79,7 +79,7 @@ struct Config: Codable {
 	
 	static func get() throws -> Config {
 		let f = File(configFilePath)
-		var config = try JSONDecoder().decode(Config.self, from: Data(bytes: Array(f.readString().utf8)))
+		var config = try JSONDecoder().decode(Config.self, from: Data(Array(f.readString().utf8)))
 		if nil == config.database {
 			guard let pgsql = CloudFormation.listRDSInstances(type: .postgres)
 				.sorted(by: { $0.resourceName < $1.resourceName }).first else {

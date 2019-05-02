@@ -13,13 +13,15 @@ let package = Package(
 		.package(url: "https://github.com/PerfectlySoft/Perfect-NIO.git", .branch("master")),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-Notifications.git", from: "4.0.0"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-SMTP.git", from: "4.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-CloudFormation.git", from: "0.0.0"),
 	],
 	targets: [
 		.target(name: "SAuthNIO", dependencies: ["SAuthNIOLib",
 											  "PerfectNotifications",
 											  "PerfectPostgreSQL",
 											  "SAuthCodables",
-											  "PerfectNIO"]),
+											  "PerfectNIO",
+											  "PerfectCloudFormation"]),
 		.testTarget(name: "SAuthNIOTests", dependencies: ["SAuthNIO", "SAuthNIOLib"])
 	]
 )
