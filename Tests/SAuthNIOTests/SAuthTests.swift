@@ -5,8 +5,8 @@ import PerfectCRUD
 import PerfectCrypto
 import PerfectPostgreSQL
 import SAuthCodables
-import SAuthLib
-@testable import SAuth
+import SAuthNIOLib
+@testable import SAuthNIO
 
 let postgresTestConnInfo = "host=localhost dbname=testing123"
 
@@ -81,7 +81,9 @@ hORLXx/oFmkXQ8YZB41hKZn828bfBwJxIqeb5PEXKB4zfxWlszvPZ5nYlmKeF+Tx
 -----END PUBLIC KEY-----
 """
 
-struct SAuthTestDBProvider: SAuthLib.SAuthConfigProvider {
+struct SAuthTestDBProvider: SAuthNIOLib.SAuthConfigProvider {
+	func sendEmailValidation<Meta: Codable>(authToken: String, account: Account<Meta>, alias: AliasBrief) throws {}
+	
 	func getDB() throws -> Database<PostgresDatabaseConfiguration> {
 		return Database(configuration: try PostgresDatabaseConfiguration(postgresTestConnInfo))
 	}
@@ -114,7 +116,7 @@ class SAuthTests: XCTestCase {
 			let s = SAuth(SAuthTestDBProvider())
 			try s.initialize()
 			
-			let token = try s.createAccount(address: un, password: pw)
+			let token = try s.createAccount(address: un, password: pw, fullName: nil)
 			let alias = try s.validateToken(token.token)
 			
 			let token2 = try s.logIn(address: un, password: pw)

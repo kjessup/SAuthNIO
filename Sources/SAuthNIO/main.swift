@@ -31,8 +31,22 @@ private extension Config.SMTP {
 	}
 }
 
+struct AccountPublicMeta: Codable {
+	let fullName: String?
+}
+
+extension Account: TableNameProvider {
+	public static var tableName: String {
+		"account"
+	}
+}
+
 struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
-	func sendEmailValidation(authToken: String, account: Account, alias: AliasBrief) throws {
+	typealias DBConfig = PostgresDatabaseConfiguration
+	
+	typealias MetaType = AccountPublicMeta
+	
+	func sendEmailValidation(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
 		guard let smtp = globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
@@ -58,7 +72,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		try email.send()
 	}
 	
-	func sendEmailPasswordReset(authToken: String, account: Account, alias: AliasBrief) throws {
+	func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
 		guard let smtp = globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
@@ -218,7 +232,7 @@ do {
 		
 		] as [Routes<AuthenticatedRequest, HTTPOutput>]}
 
-	apiRoutes = try root().api.v1.dir([apiGetRoutes, apiPostRoutes, apiOAuthRoutes, apiPublicKeyRoutes, authenticatedRoutes])
+	apiRoutes = try root().api.v1.dir(apiGetRoutes, apiPostRoutes, apiOAuthRoutes, apiPublicKeyRoutes, authenticatedRoutes)
 }
 let pwResetWebRoutes = try root().pwreset.dir{[
 	
@@ -231,7 +245,9 @@ let accountValidateRoutes = root().validate.wild(name: "token").map(sAuthHandler
 
 let healthCheckRoutes = root().healthcheck(healthCheck).json()
 
-let routes = try root().dir([apiRoutes, pwResetWebRoutes, accountValidateRoutes, healthCheckRoutes])
+let routes = try root().dir(apiRoutes, pwResetWebRoutes, accountValidateRoutes, healthCheckRoutes)
+
+
 
 try routes.bind(port: globalConfig.server.port).listen().wait()
 
