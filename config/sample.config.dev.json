@@ -23,7 +23,9 @@
 	"uris":{
 		"passwordReset":"https://sample.com/pwreset",
 		"accountValidate":"https://sample.com/validate",
-		"oauthRedirect":"oauth-swift://oauth-callback/"
+		"oauthRedirect":"oauth-swift://oauth-callback/",
+		"profilePicsFSPath":"./webroot/profile-pics",
+		"profilePicsWebPath":"/profile-pics"
 	},
 	"database":{
 		"host":"localhost",

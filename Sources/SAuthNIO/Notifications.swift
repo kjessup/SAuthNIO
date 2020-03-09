@@ -13,8 +13,14 @@ func initializeNotifications() throws {
 		return
 	}
 	NotificationPusher.addConfigurationAPNS(
-		name: sauthNotificationsConfigurationName,
-		production: notifications.production,
+		name: "Prod",
+		production: true,
+		keyId: notifications.keyId,
+		teamId: notifications.teamId,
+		privateKeyPath: "\(configDir)\(notifications.keyName)")
+	NotificationPusher.addConfigurationAPNS(
+		name: "Dev",
+		production: false,
 		keyId: notifications.keyId,
 		teamId: notifications.teamId,
 		privateKeyPath: "\(configDir)\(notifications.keyName)")

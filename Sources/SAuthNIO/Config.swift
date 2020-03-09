@@ -6,13 +6,7 @@
 //
 
 import Foundation
-import PerfectCloudFormation
-import PerfectPostgreSQL
-import PerfectCRUD
-import PerfectCrypto
-import PerfectSMTP
 import PerfectLib
-import SAuthNIOLib
 import SAuthCodables
 
 let configDir = "./config/"
@@ -23,15 +17,51 @@ let configFilePath = "\(configDir)config.dev.json"
 let configFilePath = "\(configDir)config.prod.json"
 #endif
 
-let sAuthDatabaseName = "sauth"
-let sauthNotificationsConfigurationName = "sauth"
+fileprivate let env = ProcessInfo.processInfo.environment
 
 struct Config: Codable {
 	struct Server: Codable {
 		let port: Int
 		let name: String
+		let privateKeyPath: String?
+		let certificateChainPath: String?
 		let privateKeyName: String
 		let publicKeyName: String
+		static func fromEnv() throws -> Self {
+			guard let serverports = env["server_port"],
+				let serverport = Int(serverports),
+				let servername = env["server_name"],
+				let serverprivateKeyName = env["server_privateKeyName"],
+				let serverpublicKeyName = env["server_publicKeyName"] else {
+					throw SAuthError(description: "Invalid keys for Server. \(env)")
+			}
+			print("\(type(of: self)) from env")
+			return Server(port: serverport, name: servername,
+							privateKeyPath: env["server_privateKeyPath"] ?? nil,
+							certificateChainPath: env["server_certificateChainPath"] ?? nil,
+							privateKeyName: serverprivateKeyName,
+							publicKeyName: serverpublicKeyName)
+		}
+	}
+	struct URIs: Codable {
+		let passwordReset: String?
+		let accountValidate: String?
+		let oauthRedirect: String?
+		let profilePicsFSPath: String?
+		let profilePicsWebPath: String?
+		static func fromEnv() throws -> Self {
+			guard let urisPasswordReset = env["uris_passwordReset"],
+				let urisAccountValidate = env["uris_accountValidate"],
+				let urisOauthRedirect = env["uris_oauthRedirect"],
+				let urisProfilePicsFSPath = env["uris_profilePicsFSPath"],
+				let urisProfilePicsWebPath = env["uris_profilePicsWebPath"] else {
+					throw SAuthError(description: "Invalid keys for URIs.")
+			}
+			print("\(type(of: self)) from env")
+			return URIs(passwordReset: urisPasswordReset, accountValidate: urisAccountValidate,
+						oauthRedirect: urisOauthRedirect, profilePicsFSPath: urisProfilePicsFSPath,
+						profilePicsWebPath: urisProfilePicsWebPath)
+		}
 	}
 	struct SMTP: Codable {
 		let host: String
@@ -40,6 +70,21 @@ struct Config: Codable {
 		let password: String
 		let fromName: String
 		let fromAddress: String
+		static func fromEnv() -> SMTP? {
+			guard let smtphost = env["smtp_host"],
+				let smtpports = env["smtp_port"],
+				let smtpport = Int(smtpports),
+				let smtpuser = env["smtp_user"],
+				let smtppassword = env["smtp_password"],
+				let smtpfromName = env["smtp_fromName"],
+				let smtpfromAddress = env["smtp_fromAddress"] else {
+					return nil
+			}
+			print("\(type(of: self)) from env")
+			return SMTP(host: smtphost, port: smtpport,
+						 user: smtpuser, password: smtppassword,
+						 fromName: smtpfromName, fromAddress: smtpfromAddress)
+		}
 	}
 	struct Notifications: Codable {
 		let keyName: String
@@ -47,11 +92,19 @@ struct Config: Codable {
 		let teamId: String
 		let topic: String
 		let production: Bool
-	}
-	struct URIs: Codable {
-		let passwordReset: String?
-		let accountValidate: String?
-		let oauthRedirect: String?
+		static func fromEnv() -> Notifications? {
+			guard let notificationskeyName = env["notifications_keyName"],
+				let notificationskeyId = env["notifications_keyId"],
+				let notificationsteamId = env["notifications_teamId"],
+				let notificationstopic = env["notifications_topic"],
+				let notificationsproduction = Bool(env["notifications_production"] ?? "false") else {
+					return nil
+			}
+			print("\(type(of: self)) from env")
+			return Notifications(keyName: notificationskeyName, keyId: notificationskeyId,
+								 teamId: notificationsteamId, topic: notificationstopic,
+								 production: notificationsproduction)
+		}
 	}
 	struct Database: Codable {
 		let host: String
@@ -59,6 +112,20 @@ struct Config: Codable {
 		let name: String
 		let user: String
 		let password: String
+		static func fromEnv() -> Database? {
+			guard let databaseports = env["database_port"],
+				let databaseport = Int(databaseports),
+				let databasename = env["database_name"],
+				let databaseuser = env["database_user"],
+				let databasepassword = env["database_password"],
+				let databasehost = env["database_host"] else {
+					return nil
+			}
+			print("\(type(of: self)) from env")
+			return Database(host: databasehost, port: databaseport,
+							name: databasename, user: databaseuser,
+							password: databasepassword)
+		}
 	}
 	struct Templates: Codable {
 		let passwordResetForm: String
@@ -68,51 +135,96 @@ struct Config: Codable {
 		let accountValidationEmail: String?
 		let accountValidationError: String?
 		let accountValidationOk: String?
+		static func fromEnv() -> Templates? {
+			guard let templatespasswordResetForm = env["templates_passwordResetForm"],
+				let templatespasswordResetOk = env["templates_passwordResetOk"],
+				let templatespasswordResetError = env["templates_passwordResetError"] else {
+					return nil
+			}
+			print("\(type(of: self)) from env")
+			return Templates(passwordResetForm: templatespasswordResetForm,
+							 passwordResetOk: templatespasswordResetOk,
+							 passwordResetError: templatespasswordResetError,
+							 passwordResetEmail: env["templates_passwordResetEmail"],
+							 accountValidationEmail: env["templates_accountValidationEmail"],
+							 accountValidationError: env["templates_accountValidationError"],
+							 accountValidationOk: env["templates_accountValidationOk"])
+		}
+	}
+	struct Redis: Codable {
+		let host: String
+		let port: Int?
+		static func fromEnv() -> Redis? {
+			guard let redishost = env["redis_host"] else {
+					return nil
+			}
+			let p = env["redis_port"]
+			print("\(type(of: self)) from env")
+			return Redis(host: redishost, port: p != nil ? Int(p ?? "") : nil)
+		}
+	}
+	struct Enable: Codable {
+		let userSelfRegistration: Bool
+		let adminRoutes: Bool
+		let userProfileUpdate: Bool
+		let promptFirstAccount: Bool
+		let readinessCheck: Bool
+		let onDevicePWReset: Bool
+		static func fromEnv() -> Self {
+			let userSelfRegistration = Bool(env["enable_userSelfRegistration"] ?? "true") ?? false
+			let adminRoutes = Bool(env["enable_adminRoutes"] ?? "true") ?? false
+			let userProfileUpdate = Bool(env["enable_userProfileUpdate"] ?? "true") ?? false
+			let promptFirstAccount = Bool(env["enable_promptFirstAccount"] ?? "true") ?? false
+			let readinessCheck = Bool(env["enable_readinessCheck"] ?? "true") ?? false
+			
+			// !FIX! not implimented. not checked in sauthlib
+			let onDevicePWReset = Bool(env["enable_onDevicePWReset"] ?? "false") ?? false
+			
+			print("\(type(of: self)) from env")
+			return Enable(userSelfRegistration: userSelfRegistration,
+						  adminRoutes: adminRoutes,
+						  userProfileUpdate: userProfileUpdate,
+						  promptFirstAccount: promptFirstAccount,
+						  readinessCheck: readinessCheck,
+						  onDevicePWReset: onDevicePWReset)
+		}
 	}
 	let server: Server
+	let uris: URIs
+	
 	let smtp: SMTP?
 	let notifications: Notifications?
-	let uris: URIs
 	var database: Database?
 	let templates: Templates?
 	var databaseName: String?
-	
+	let redis: Redis?
+	var enable: Enable?
 	static func get() throws -> Config {
-		let f = File(configFilePath)
-		var config = try JSONDecoder().decode(Config.self, from: Data(Array(f.readString().utf8)))
-		if nil == config.database {
-			guard let pgsql = CloudFormation.listRDSInstances(type: .postgres)
-				.sorted(by: { $0.resourceName < $1.resourceName }).first else {
-					throw SAuthError(description: "Database is not configured.")
+		do {
+			let f = File(configFilePath)
+			var config = try JSONDecoder().decode(Config.self, from: Data(Array(f.readString().utf8)))
+			try config.database?.initialize()
+			if nil == config.enable {
+				config.enable = Enable.fromEnv()
 			}
-			config.database = Config.Database(host: pgsql.hostName,
-											  port: pgsql.hostPort,
-											  name: config.databaseName ?? sAuthDatabaseName,
-											  user: pgsql.userName,
-											  password: pgsql.password)
+			return config
+		} catch {
+			let server = try Server.fromEnv()
+			let uris = try URIs.fromEnv()
+			let smtp = SMTP.fromEnv()
+			let notifications = Notifications.fromEnv()
+			let database = Database.fromEnv()
+			let templates = Templates.fromEnv()
+			let redis = Redis.fromEnv()
+			let enable = Enable.fromEnv()
+			return Config(server: server,
+						  uris: uris, smtp: smtp,
+						  notifications: notifications,
+						  database: database,
+						  templates: templates,
+						  redis: redis,
+						  enable: enable)
 		}
-		try config.database?.initialize()
-		return config
 	}
 }
 
-extension Config.Database {
-	func initialize() throws {
-		let postgresConfig = try PostgresDatabaseConfiguration(database: "postgres", host: host, port: port, username: user, password: password)
-		let db = Database(configuration: postgresConfig)
-		struct PGDatabase: Codable, TableNameProvider {
-			static var tableName = "pg_database"
-			let datname: String
-		}
-		let count = try db.table(PGDatabase.self).where(\PGDatabase.datname == name).count()
-		if count == 0 {
-			try db.sql("CREATE DATABASE \(name)")
-		}
-	}
-	func configuration() throws -> PostgresDatabaseConfiguration {
-		return try PostgresDatabaseConfiguration(database: name, host: host, port: port, username: user, password: password)
-	}
-	func crud() throws -> Database<PostgresDatabaseConfiguration> {
-		return Database(configuration: try configuration())
-	}
-}

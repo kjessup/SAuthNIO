@@ -6,10 +6,14 @@ import PerfectCrypto
 import PerfectPostgreSQL
 import SAuthCodables
 import SAuthNIOLib
-@testable import SAuthNIO
+import SAuthNIO
 
 let postgresTestConnInfo = "host=localhost dbname=testing123"
-
+public struct AccountMetaData: Codable {
+	public var fullName: String? = nil
+	// ...
+	public init() {}
+}
 let privKeyString = """
 -----BEGIN RSA PRIVATE KEY-----
 MIIJJwIBAAKCAgEAxSE9N9xbtnP+KyCPS9VDMcEoSIS9BMGK7r4p+GisR5z9Y5MA
@@ -81,8 +85,31 @@ hORLXx/oFmkXQ8YZB41hKZn828bfBwJxIqeb5PEXKB4zfxWlszvPZ5nYlmKeF+Tx
 -----END PUBLIC KEY-----
 """
 
+let jwk = """
+{"kty":"RSA","e":"AQAB","kid":"6ddbbaeb-791f-4e3b-bda3-80c87c830ae9",
+"n":"xSE9N9xbtnP-KyCPS9VDMcEoSIS9BMGK7r4p-GisR5z9Y5MA3w7U4PRnp6hwqNvoAKuEmMHsJ_ebh1PFZjzK6okbi4TFWoB4G3N7nNNa-ZeuS7vIpCXdsDciLSCxHvqyV1BrHtyUvoZHFgcrIx4LJ4lt5_Q9pi1C6mDkUvA0nzA-oYb0mLRkKIRCQfTkM6UMhEfCTecbgoCML0dKRoEMG_KmTXV53q2IWaLmvTmxOD34HU8VWkN27JcNc_RSjUYmgxyPwZZ4lMtLWfo8bx6cV43OY0vYofvoqTiLluP5hrtk9hotT2z6kUfSplYPS34oBSuq6HxbMDqSBxCUxBE17vFFcxPTjedg1muSfneplu-TT2fcTdMAaVW4wf9E-nTNf0EsfweS5AD75KWz3FxYLLRAFyoAJ19wFNzKVkMjzpK30g_rMKnIEXH1WaqAPBbhG4b9AWXFp7F7himQb61opgboMxAQVA-8k_HUMgwsZuYiSUtpvTZMBx21c6CRlPpi3PVchjhRLVKCTU0fBX3mt-zDu6qg916F_yZKn0EiWluCeajD8nYZzQHdkGPT5Jv1VSPhVxfjA3l9U7m8F3TThORLXx_oFmkXQ8YZB41hKZn828bfBwJxIqeb5PEXKB4zfxWlszvPZ5nYlmKeF-Tx0S0U39qpwRUYXynmgBAhv6k"}
+"""
+
 struct SAuthTestDBProvider: SAuthNIOLib.SAuthConfigProvider {
-	func sendEmailValidation<Meta: Codable>(authToken: String, account: Account<Meta>, alias: AliasBrief) throws {}
+	func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
+		let now = Date().sauthTimeInterval
+		return TokenClaim(issuer: "sauth",
+						   subject: address,
+						   expiration: now + 10000,
+						   issuedAt: now,
+						   accountId: accountId,
+						   extra: [:])
+	}
+	
+	func metaFrom(request: AccountRegisterRequest) -> AccountMetaData? {
+		return AccountMetaData()
+	}
+	
+	typealias DBConfig = PostgresDatabaseConfiguration
+	
+	typealias MetaType = AccountMetaData
+	
+	func sendEmailValidation<MetaType: Codable>(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {}
 	
 	func getDB() throws -> Database<PostgresDatabaseConfiguration> {
 		return Database(configuration: try PostgresDatabaseConfiguration(postgresTestConnInfo))
@@ -95,7 +122,7 @@ struct SAuthTestDBProvider: SAuthNIOLib.SAuthConfigProvider {
 	}
 	func getPushConfigurationName(forType: String) throws -> String { return "stub" }
 	func getPushConfigurationTopic(forType: String) throws -> String { return "stub" }
-	func sendEmailPasswordReset(authToken: String, account: Account, alias: AliasBrief) throws {}
+	func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {}
 	func getTemplatePath(_ key: TemplateKey) throws -> String { return "stub" }
 	func getURI(_ key: URIKey) throws -> String { return "stub" }
 }
@@ -106,6 +133,19 @@ class SAuthTests: XCTestCase {
 		super.setUp()
 	}
 	
+	func testJWK() {
+		do {
+			let pk = try PEMKey(source: pubKeyString)
+			let jwk = try JWK(key: pk)
+			let d = try JSONEncoder().encode(jwk)
+			let s = String(data: d, encoding: .utf8)
+			print(s)
+		} catch {
+			XCTFail("\(error)")
+		}
+	}
+	
+	/*
 	func testSAuth() {
 		let un = "foo@gmail.com"
 		let pw = "wqo[kdowqk"
@@ -116,7 +156,7 @@ class SAuthTests: XCTestCase {
 			let s = SAuth(SAuthTestDBProvider())
 			try s.initialize()
 			
-			let token = try s.createAccount(address: un, password: pw, fullName: nil)
+			let token = try s.createAccount(address: un, password: pw, profilePic: nil, meta: AccountMetaData())
 			let alias = try s.validateToken(token.token)
 			
 			let token2 = try s.logIn(address: un, password: pw)
@@ -173,10 +213,10 @@ class SAuthTests: XCTestCase {
 			XCTFail("\(error)")
 		}
 	}
-
+	*/
     static var allTests: [(String, (SAuthTests) -> () throws -> Void)] {
         return [
-			("testSAuth", testSAuth)
+//			("testSAuth", testSAuth)
         ]
     }
 }
