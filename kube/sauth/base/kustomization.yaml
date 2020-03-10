@@ -1,0 +1,6 @@
+resources:
+- deployment.yaml
+configMapGenerator:
+- name: sauth-config
+  envs:
+  - config.env

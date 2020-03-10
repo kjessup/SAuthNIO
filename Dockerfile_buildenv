@@ -1,0 +1,6 @@
+FROM sauthnio_base:latest
+#ARG SSH_PRIVATE_KEY
+#RUN mkdir /root/.ssh/
+#COPY ${SSH_PRIVATE_KEY} /root/.ssh/id_rsa
+#RUN touch /root/.ssh/known_hosts
+#RUN ssh-keyscan gitlab.internal.treefrog.ca >> /root/.ssh/known_hosts

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sauth
+spec:
+  template:
+    spec:
+      containers:
+        - name: sauth
+          livenessProbe:
+            httpGet:
+              path: /sauth/health/live
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 3
+          readinessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            httpGet:
+              path: /sauth/health/ready
+              port: 8000

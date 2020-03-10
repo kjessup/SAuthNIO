@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: sauth-ingress
+spec:
+  rules:
+  - host: sauth.yourdomain.ca
+    http:
+      paths:
+      - path: /sauth/
+        backend:
+          serviceName: sauth
+          servicePort: 80
+      - path: /profile-pics/
+        backend:
+          serviceName: sauth
+          servicePort: 80
+  tls:
+  - hosts:
+    - sauth.yourdomain.ca
+    secretName: sauth-tls-crt
