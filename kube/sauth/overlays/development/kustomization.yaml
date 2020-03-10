@@ -6,7 +6,7 @@ resources:
 patchesStrategicMerge:
 - ingress.yaml
 configMapGenerator:
-- name: landpassauthserver-config
+- name: sauth-config
   behavior: merge
   envs:
   - config.env
