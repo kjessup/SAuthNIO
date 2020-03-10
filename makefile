@@ -29,6 +29,8 @@ help:
 	@echo " make image	- create deployment image from linux release build"
 	@echo " make keys	- generate the JWT keys if they do not exist"
 	@echo " make run	- run SAuth locally on port 8000"
+	@echo " make kdevelopment	- deploy to development namespace"
+	@echo " make kproduction	- deploy to production namespace"	
 
 .package_lin.resolved:
 	echo "{\"object\": {\"pins\": []}, \"version\":1}" > $@
@@ -70,6 +72,12 @@ image: ${BUILD_ENV_DIR} linux
 	cd ${BUILD_ENV_DIR} && \
 		docker build . -t ${DEPLOY_IMAGE_TAG}
 	rm -rf ${BUILD_ENV_DIR}
+
+kdevelopment:
+	kustomize build kube/sauth/overlays/development | kubectl apply -f -
+
+kproduction:
+	kustomize build kube/sauth/overlays/production | kubectl apply -f -
 
 keys: 
 ifeq ($(wildcard ./config/jwtRS256.private.pem),)
