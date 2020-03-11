@@ -8,10 +8,18 @@ import Foundation
 import PerfectNIO
 import SAuthNIOLib
 import SAuthCodables
+import SAuthConfig
+import PerfectCrypto
 
-typealias FullRoute = Routes<HTTPRequest, HTTPOutput>
+public typealias FullRoute = Routes<HTTPRequest, HTTPOutput>
 
-func sauthRoutes() throws -> FullRoute {
+public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) throws -> FullRoute {
+	let oauthHandlers = OAuthHandlers(sauth.provider)
+	let sAuthHandlers = SAuthHandlers(sauth.provider)
+	let serverPublicKeyStr = try sauth.provider.getServerPublicKey().publicKeyString!
+	let serverPublicKeyJWK = try JWK(key: sauth.provider.getServerPublicKey())
+	let serverPublicKeyJWKStr = String(data: try JSONEncoder().encode(serverPublicKeyJWK), encoding: .utf8)
+	
 	let enable = try Config.get().enable ?? Config.Enable.fromEnv()
 	let apiRoutes: FullRoute
 	do {
@@ -55,9 +63,9 @@ func sauthRoutes() throws -> FullRoute {
 			$0.register.decode(AuthAPI.RegisterRequest.self, sAuthHandlers.register).json()
 		}
 		
-		let userProfileUpdateRoutes = try root().a(sAuthHandlers.authenticated).dir(type: HTTPOutput.self) {
-			$0.POST.profile.update.decode(UpdateProfilePicRequest.self, sAuthHandlers.updateProfilePic).json()
-			$0.POST.mydata.decode(AccountMetaData.self, sAuthHandlers.setMeMeta).json()
+		let userProfileUpdateRoutes = try root().POST.a(sAuthHandlers.authenticated).dir(type: HTTPOutput.self) {
+			$0.profile.update.decode(UpdateProfilePicRequest.self, sAuthHandlers.updateProfilePic).json()
+			$0.mydata.decode(P.MetaType.self, sAuthHandlers.setMeMeta).json()
 		}
 		
 		let authenticatedAdminRoutes = try root().a(sAuthHandlers.authenticated)

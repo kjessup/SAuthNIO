@@ -7,6 +7,7 @@
 
 import Foundation
 import PerfectNotifications
+import SAuthConfig
 
 func initializeNotifications() throws {
 	guard let notifications = globalConfig.notifications else {

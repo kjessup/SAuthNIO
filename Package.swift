@@ -19,6 +19,14 @@ let package = Package(
 		.target(name: "SAuthNIO", dependencies: [
 			"PerfectNIO",
 			"PerfectNotifications",
+			"SAuthRoutes",
+			"SAuthConfig"]),
+		.target(name: "SAuthRoutes", dependencies: [
+			"SAuthConfig",
+			"SAuthNIOLib",
+			"PerfectPostgreSQL"]),
+		.target(name: "SAuthConfig", dependencies: [
+			"PerfectNIO",
 			"SAuthNIOLib",
 			"PerfectPostgreSQL"]),
 		.testTarget(name: "SAuthNIOTests", dependencies: ["SAuthNIO", "SAuthNIOLib"])

@@ -7,8 +7,10 @@ import SAuthNIOLib
 import PerfectLib
 import PerfectCrypto
 import PerfectMustache
+import SAuthConfig
+import SAuthRoutes
 
-let globalConfig = try Config.get()
+SAuthConfig.globalConfig = try Config.get()
 try initializeNotifications()
 
 let serverPrivateKey = try PEMKey(pemPath: "\(globalConfig.server.privateKeyName)")
@@ -17,14 +19,11 @@ let serverPublicKey = try PEMKey(source: serverPublicKeyStr)
 let serverPublicKeyJWT = try JWK(key: serverPublicKey)
 let serverPublicKeyJWKStr = String(data: try JSONEncoder().encode(serverPublicKeyJWT), encoding: .utf8)
 
-let sauthConfigProvider = SAuthConfigProvider()
+let sauthConfigProvider = SAuthConfig.SAuthConfigProvider()
 let sauth = SAuth(sauthConfigProvider)
 try sauth.initialize()
 
-let oauthHandlers = OAuthHandlers(sauthConfigProvider)
-let sAuthHandlers = SAuthHandlers(sauthConfigProvider)
-
-let sRoutes = try root().sauth.dir(try sauthRoutes())
+let sRoutes = try root().sauth.dir(try sauthRoutes(sauth))
 
 let administrationFiles = try root().GET.dir(type: HTTPOutput.self) {
 	$0.path("profile-pics").trailing {

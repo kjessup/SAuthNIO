@@ -19,6 +19,8 @@ import struct Foundation.UUID
 
 let sauthNotificationsConfigurationName = "sauth"
 
+public var globalConfig: Config!
+
 public struct AccountMetaData: Codable {
 	public var fullName: String? = nil
 	// ...
@@ -56,7 +58,7 @@ extension Config.Database {
 	func configuration() throws -> PostgresDatabaseConfiguration {
 		return try PostgresDatabaseConfiguration(database: name, host: host, port: port, username: user, password: password)
 	}
-	func crud() throws -> Database<PostgresDatabaseConfiguration> {
+	public func crud() throws -> Database<PostgresDatabaseConfiguration> {
 		return Database(configuration: try configuration())
 	}
 }
@@ -74,11 +76,15 @@ extension Account {
 // !FIX! config
 let tokenExpirationSeconds = 31536000
 
-struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
-	typealias DBConfig = PostgresDatabaseConfiguration
-	typealias MetaType = AccountMetaData
+public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
+	public typealias DBConfig = PostgresDatabaseConfiguration
+	public typealias MetaType = AccountMetaData
 	
-	func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
+	public init() {
+		
+	}
+	
+	public func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
 		var roles = ["user"]
 		do {
 			let db = try getDB()
@@ -107,7 +113,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 						   extra: extra)
 	}
 	
-	func sendEmailValidation(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
+	public func sendEmailValidation(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
 		guard let smtp = globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
@@ -133,7 +139,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		try email.send()
 	}
 	
-	func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
+	public func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
 		guard let smtp = globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
@@ -158,7 +164,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		try email.send()
 	}
 	
-	func plainResetEmailBody(fullName: String, uri: String, authToken: String) -> String {
+	public func plainResetEmailBody(fullName: String, uri: String, authToken: String) -> String {
 		return """
 		Hello, \(fullName). Here is your requested password reset link:
 		\(uri)/\(authToken)
@@ -170,7 +176,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		"""
 	}
 	
-	func plainValidateAccountBody(address: String, uri: String, authToken: String) -> String {
+	public func plainValidateAccountBody(address: String, uri: String, authToken: String) -> String {
 		return """
 		Hello, an account was created for this address "\(address)". Follow this link to validate your account:
 		\(uri)/\(authToken)
@@ -180,32 +186,32 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		"""
 	}
 	
-	func getDB() throws -> Database<PostgresDatabaseConfiguration> {
+	public func getDB() throws -> Database<PostgresDatabaseConfiguration> {
 		guard let db = try globalConfig.database?.crud() else {
 			throw SAuthError(description: "Database is not configured.")
 		}
 		return db
 	}
-	func getServerPublicKey() throws -> PEMKey {
-		return serverPublicKey
+	public func getServerPublicKey() throws -> PEMKey {
+		return globalConfig.server.serverPublicKey
 	}
-	func getServerPrivateKey() throws -> PEMKey {
-		return serverPrivateKey
+	public func getServerPrivateKey() throws -> PEMKey {
+		return globalConfig.server.serverPrivateKey
 	}
-	func getPushConfigurationName(forType: String) throws -> String {
+	public func getPushConfigurationName(forType: String) throws -> String {
 		guard let _ = globalConfig.notifications else {
 			throw SAuthError(description: "iOS notifications are not configured.")
 		}
 		return sauthNotificationsConfigurationName
 	}
-	func getPushConfigurationTopic(forType: String) throws -> String {
+	public func getPushConfigurationTopic(forType: String) throws -> String {
 		guard let topic = globalConfig.notifications?.topic else {
 			throw SAuthError(description: "iOS notifications are not configured.")
 		}
 		return topic
 	}
 	
-	func getTemplatePath(_ key: TemplateKey) throws -> String {
+	public func getTemplatePath(_ key: TemplateKey) throws -> String {
 		var path: String?
 		switch key {
 		case .passwordResetForm:
@@ -229,7 +235,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		return "\(templatesDir)\(p)"
 	}
 	
-	func getURI(_ key: URIKey) throws -> String {
+	public func getURI(_ key: URIKey) throws -> String {
 		var path: String?
 		switch key {
 		case .oauthRedirect:
@@ -248,7 +254,7 @@ struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		}
 		return p
 	}
-	func metaFrom(request: AccountRegisterRequest) -> MetaType? {
+	public func metaFrom(request: AccountRegisterRequest) -> MetaType? {
 		var meta = AccountMetaData()
 		meta.fullName = request.fullName
 		return meta

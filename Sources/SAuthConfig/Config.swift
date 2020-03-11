@@ -8,9 +8,10 @@
 import Foundation
 import PerfectLib
 import SAuthCodables
+import PerfectCrypto
 
-let configDir = "./config/"
-let templatesDir = "./templates/"
+public let configDir = "./config/"
+public let templatesDir = "./templates/"
 #if os(macOS) || DEBUG
 let configFilePath = "\(configDir)config.dev.json"
 #else
@@ -19,14 +20,21 @@ let configFilePath = "\(configDir)config.prod.json"
 
 fileprivate let env = ProcessInfo.processInfo.environment
 
-struct Config: Codable {
-	struct Server: Codable {
-		let port: Int
-		let name: String
-		let privateKeyPath: String?
-		let certificateChainPath: String?
-		let privateKeyName: String
-		let publicKeyName: String
+public struct Config: Codable {
+	public struct Server: Codable {
+		public let port: Int
+		public let name: String
+		public let privateKeyPath: String?
+		public let certificateChainPath: String?
+		public let privateKeyName: String
+		public let publicKeyName: String
+		
+		public var serverPrivateKey: PEMKey { try! PEMKey(pemPath: "\(privateKeyName)") }
+		public var serverPublicKeyStr: String { try! File("\(publicKeyName)").readString() }
+		public var serverPublicKey: PEMKey { try! PEMKey(source: serverPublicKeyStr) }
+		public var serverPublicKeyJWK: JWK { try! JWK(key: serverPublicKey) }
+		public var serverPublicKeyJWKStr: String { String(data: try! JSONEncoder().encode(serverPublicKeyJWK), encoding: .utf8)! }
+		
 		static func fromEnv() throws -> Self {
 			guard let serverports = env["server_port"],
 				let serverport = Int(serverports),
@@ -43,12 +51,12 @@ struct Config: Codable {
 							publicKeyName: serverpublicKeyName)
 		}
 	}
-	struct URIs: Codable {
-		let passwordReset: String?
-		let accountValidate: String?
-		let oauthRedirect: String?
-		let profilePicsFSPath: String?
-		let profilePicsWebPath: String?
+	public struct URIs: Codable {
+		public let passwordReset: String?
+		public let accountValidate: String?
+		public let oauthRedirect: String?
+		public let profilePicsFSPath: String?
+		public let profilePicsWebPath: String?
 		static func fromEnv() throws -> Self {
 			guard let urisPasswordReset = env["uris_passwordReset"],
 				let urisAccountValidate = env["uris_accountValidate"],
@@ -63,13 +71,13 @@ struct Config: Codable {
 						profilePicsWebPath: urisProfilePicsWebPath)
 		}
 	}
-	struct SMTP: Codable {
-		let host: String
-		let port: Int
-		let user: String
-		let password: String
-		let fromName: String
-		let fromAddress: String
+	public struct SMTP: Codable {
+		public let host: String
+		public let port: Int
+		public let user: String
+		public let password: String
+		public let fromName: String
+		public let fromAddress: String
 		static func fromEnv() -> SMTP? {
 			guard let smtphost = env["smtp_host"],
 				let smtpports = env["smtp_port"],
@@ -86,12 +94,12 @@ struct Config: Codable {
 						 fromName: smtpfromName, fromAddress: smtpfromAddress)
 		}
 	}
-	struct Notifications: Codable {
-		let keyName: String
-		let keyId: String
-		let teamId: String
-		let topic: String
-		let production: Bool
+	public struct Notifications: Codable {
+		public let keyName: String
+		public let keyId: String
+		public let teamId: String
+		public let topic: String
+		public let production: Bool
 		static func fromEnv() -> Notifications? {
 			guard let notificationskeyName = env["notifications_keyName"],
 				let notificationskeyId = env["notifications_keyId"],
@@ -106,12 +114,12 @@ struct Config: Codable {
 								 production: notificationsproduction)
 		}
 	}
-	struct Database: Codable {
-		let host: String
-		let port: Int
-		let name: String
-		let user: String
-		let password: String
+	public struct Database: Codable {
+		public let host: String
+		public let port: Int
+		public let name: String
+		public let user: String
+		public let password: String
 		static func fromEnv() -> Database? {
 			guard let databaseports = env["database_port"],
 				let databaseport = Int(databaseports),
@@ -127,14 +135,14 @@ struct Config: Codable {
 							password: databasepassword)
 		}
 	}
-	struct Templates: Codable {
-		let passwordResetForm: String
-		let passwordResetOk: String
-		let passwordResetError: String
-		let passwordResetEmail: String?
-		let accountValidationEmail: String?
-		let accountValidationError: String?
-		let accountValidationOk: String?
+	public struct Templates: Codable {
+		public let passwordResetForm: String
+		public let passwordResetOk: String
+		public let passwordResetError: String
+		public let passwordResetEmail: String?
+		public let accountValidationEmail: String?
+		public let accountValidationError: String?
+		public let accountValidationOk: String?
 		static func fromEnv() -> Templates? {
 			guard let templatespasswordResetForm = env["templates_passwordResetForm"],
 				let templatespasswordResetOk = env["templates_passwordResetOk"],
@@ -151,9 +159,9 @@ struct Config: Codable {
 							 accountValidationOk: env["templates_accountValidationOk"])
 		}
 	}
-	struct Redis: Codable {
-		let host: String
-		let port: Int?
+	public struct Redis: Codable {
+		public let host: String
+		public let port: Int?
 		static func fromEnv() -> Redis? {
 			guard let redishost = env["redis_host"] else {
 					return nil
@@ -163,14 +171,14 @@ struct Config: Codable {
 			return Redis(host: redishost, port: p != nil ? Int(p ?? "") : nil)
 		}
 	}
-	struct Enable: Codable {
-		let userSelfRegistration: Bool
-		let adminRoutes: Bool
-		let userProfileUpdate: Bool
-		let promptFirstAccount: Bool
-		let readinessCheck: Bool
-		let onDevicePWReset: Bool
-		static func fromEnv() -> Self {
+	public struct Enable: Codable {
+		public let userSelfRegistration: Bool
+		public let adminRoutes: Bool
+		public let userProfileUpdate: Bool
+		public let promptFirstAccount: Bool
+		public let readinessCheck: Bool
+		public let onDevicePWReset: Bool
+		public static func fromEnv() -> Self {
 			let userSelfRegistration = Bool(env["enable_userSelfRegistration"] ?? "true") ?? false
 			let adminRoutes = Bool(env["enable_adminRoutes"] ?? "true") ?? false
 			let userProfileUpdate = Bool(env["enable_userProfileUpdate"] ?? "true") ?? false
@@ -189,17 +197,17 @@ struct Config: Codable {
 						  onDevicePWReset: onDevicePWReset)
 		}
 	}
-	let server: Server
-	let uris: URIs
+	public let server: Server
+	public let uris: URIs
 	
-	let smtp: SMTP?
-	let notifications: Notifications?
-	var database: Database?
-	let templates: Templates?
-	var databaseName: String?
-	let redis: Redis?
-	var enable: Enable?
-	static func get() throws -> Config {
+	public let smtp: SMTP?
+	public let notifications: Notifications?
+	public var database: Database?
+	public let templates: Templates?
+	public let redis: Redis?
+	public var enable: Enable?
+	
+	public static func get() throws -> Config {
 		do {
 			let f = File(configFilePath)
 			var config = try JSONDecoder().decode(Config.self, from: Data(Array(f.readString().utf8)))
