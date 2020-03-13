@@ -7,10 +7,11 @@
 
 import Foundation
 import PerfectNotifications
+import SAuthNIOLib
 import SAuthConfig
 
 func initializeNotifications() throws {
-	guard let notifications = globalConfig.notifications else {
+	guard let notifications = Config.globalConfig.notifications else {
 		return
 	}
 	NotificationPusher.addConfigurationAPNS(

@@ -15,12 +15,23 @@ public typealias FullRoute = Routes<HTTPRequest, HTTPOutput>
 
 public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) throws -> FullRoute {
 	let oauthHandlers = OAuthHandlers(sauth.provider)
+
+	//	routes.add(TRoute(method: .get, uri: "/api/v1/oauth/upgrade/{provider}/{token}", handler: oauthHandlers.oauthLoginHandler))
+	//	routes.add(method: .get, uri: "/api/v1/oauth/return/{provider}", handler: oauthHandlers.oauthReturnHandler)
+	let oauthRoutes = try root().GET.oauth.dir(type: HTTPOutput.self) {
+		$0.upgrade
+			.wild { $1 }
+			.wild(OAuthProviderAndToken.init).map(oauthHandlers.oauthLoginHandler).json()
+		$0.return
+			.wild(name: "provider").map(oauthHandlers.oauthReturnHandler)
+	}
+	
 	let sAuthHandlers = SAuthHandlers(sauth.provider)
 	let serverPublicKeyStr = try sauth.provider.getServerPublicKey().publicKeyString!
 	let serverPublicKeyJWK = try JWK(key: sauth.provider.getServerPublicKey())
 	let serverPublicKeyJWKStr = String(data: try JSONEncoder().encode(serverPublicKeyJWK), encoding: .utf8)
 	
-	let enable = try Config.get().enable ?? Config.Enable.fromEnv()
+	let enable = Config.globalConfig.enable
 	let apiRoutes: FullRoute
 	do {
 		let apiGetRoutes = try root().GET.dir(type: HTTPOutput.self) {
@@ -77,19 +88,43 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 				.map(sAuthHandlers.register).json()			
 		}
 		
-		if enable.userSelfRegistration {
+		let firstAccountRoutes = try root().initSAuth.statusCheck {
+			let db = try sauth.provider.getDB()
+			guard try db.table(Account<P.MetaType>.self).count() == 0 else {
+				return .notFound
+			}
+			return .ok
+		}.dir(type: HTTPOutput.self) {
+			$0.GET.map {
+				_ -> HTTPOutput in
+				guard let tempForm = try? sauth.provider.getTemplatePath(.sauthInitForm) else {
+					return ErrorOutput(status: .badRequest, description: "Templates not configured.")
+				}
+				return try MustacheOutput(templatePath: tempForm, inputs: [:], contentType: "text/html")
+			}
+			$0.POST.decode(AccountRegisterRequest.self, sAuthHandlers.initSAuth).json()
+		}
+		
+		if enable?.userSelfRegistration ?? true {
 			print("userSelfRegistration true")
 			routes.append(userSelfRegistrationRoutes)
 		}
-		if enable.userProfileUpdate {
+		if enable?.userProfileUpdate ?? true {
 			print("userSelfRegistration true")
 			routes.append(userProfileUpdateRoutes)
 		}
-		if enable.adminRoutes {
+		if enable?.adminRoutes ?? false {
 			print("adminRoutes true")
 			routes.append(authenticatedAdminRoutes)
 		}
-		
+		if enable?.oauthRoutes ?? true {
+			print("oauthRoutes true")
+			routes.append(oauthRoutes)
+		}
+		if enable?.promptFirstAccount ?? true {
+			print("promptFirstAccount true")
+			routes.append(firstAccountRoutes)
+		}
 		apiRoutes = try root().dir(routes)
 	}
 	
@@ -100,7 +135,7 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 	
 	let accountValidateRoutes = root().GET.validate.wild(name: "token").map(sAuthHandlers.accountValidateWeb)
 	
-	let doReadyCheck = enable.readinessCheck
+	let doReadyCheck = enable?.readinessCheck ?? false
 	let healthRoutes = try root().GET.health.dir(type: HTTPOutput.self) {
 		$0.live { _ -> HTTPOutput in TextOutput("ok") }
 		$0.ready {

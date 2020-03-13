@@ -145,6 +145,77 @@ class SAuthTests: XCTestCase {
 		}
 	}
 	
+	func testEnvDecoder() {
+		do {
+			struct ConfigItem1: Codable {
+				let name: String
+				let ival: Int
+				let bval: Bool
+			}
+			struct ConfigItem2: Codable {
+				let name: String
+				let ival: Int
+				let bval: Bool
+			}
+			struct ListItem: Codable {
+				let name: String
+				let ivals: [Int]
+			}
+			struct Config: Codable {
+				let item1: ConfigItem1
+				let item2: ConfigItem2
+				let items1: [ConfigItem1]
+				let items2: [ListItem]
+			}
+			let envItems = [
+			("item1_name", "foo"),
+			("item1_ival", "42"),
+			("item1_bval", "true"),
+			("item2_name", "bar"),
+			("item2_ival", "42"),
+			("item2_bval", "true"),
+			
+			("items1_0_name", "foo"),
+			("items1_0_ival", "42"),
+			("items1_0_bval", "true"),
+			("items1_1_name", "bar"),
+			("items1_1_ival", "42"),
+			("items1_1_bval", "true"),
+			
+			("items2_0_name", "foo"),
+			("items2_0_ivals_0", "1"),
+			("items2_0_ivals_1", "2"),
+			("items2_1_name", "bar"),
+			("items2_1_ivals_0", "3"),
+			("items2_1_ivals_1", "4"),
+			]
+			for (k, v) in envItems {
+				setenv(k, v, 1)
+			}
+			let config = try Config(from: EnvVarDecoder())
+			let item1 = config.item1
+			XCTAssertEqual(item1.name, "foo")
+			XCTAssertEqual(item1.ival, 42)
+			XCTAssertEqual(item1.bval, true)
+			let item2 = config.item2
+			XCTAssertEqual(item2.name, "bar")
+			XCTAssertEqual(item2.ival, 42)
+			XCTAssertEqual(item2.bval, true)
+			let items1 = config.items1
+			XCTAssertEqual(items1.count, 2)
+			XCTAssertEqual(items1[0].name, "foo")
+			XCTAssertEqual(items1[1].name, "bar")
+			let items2 = config.items2
+			XCTAssertEqual(items2.count, 2)
+			XCTAssertEqual(items2[0].name, "foo")
+			XCTAssertEqual(items2[0].ivals, [1,2])
+			XCTAssertEqual(items2[1].name, "bar")
+			XCTAssertEqual(items2[1].ivals, [3,4])
+		} catch {
+			XCTFail("\(error)")
+		}
+	}
+	
 	/*
 	func testSAuth() {
 		let un = "foo@gmail.com"

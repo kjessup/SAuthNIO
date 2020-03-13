@@ -19,8 +19,6 @@ import struct Foundation.UUID
 
 let sauthNotificationsConfigurationName = "sauth"
 
-public var globalConfig: Config!
-
 public struct AccountMetaData: Codable {
 	public var fullName: String? = nil
 	// ...
@@ -114,17 +112,17 @@ public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 	}
 	
 	public func sendEmailValidation(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
-		guard let smtp = globalConfig.smtp else {
+		guard let smtp = Config.globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
-		guard let uri = globalConfig.uris.accountValidate else {
+		guard let uri = Config.globalConfig.uris.accountValidate else {
 			throw SAuthError(description: "Account validation is not configured.")
 		}
 		let address = alias.address
 		let email = smtp.email(subject: "Account Validation",
 							   to: [.init(address: address)],
 							   from: .init(name: smtp.fromName, address: smtp.fromAddress))
-		if let emailTemplate = globalConfig.templates?.accountValidationEmail {
+		if let emailTemplate = Config.globalConfig.templates?.accountValidationEmail {
 			do {
 				let map: [String:Any] = ["address":address, "uri":uri, "authToken":authToken]
 				let ctx = MustacheEvaluationContext(templatePath: emailTemplate, map: map)
@@ -140,16 +138,16 @@ public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 	}
 	
 	public func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
-		guard let smtp = globalConfig.smtp else {
+		guard let smtp = Config.globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
-		guard let uri = globalConfig.uris.passwordReset else {
+		guard let uri = Config.globalConfig.uris.passwordReset else {
 			throw SAuthError(description: "Password reset is not configured.")
 		}
 		let email = smtp.email(subject: "Password Reset",
 							   to: [.init(address: alias.address)],
 							   from: .init(name: smtp.fromName, address: smtp.fromAddress))
-		if let emailTemplate = globalConfig.templates?.passwordResetEmail {
+		if let emailTemplate = Config.globalConfig.templates?.passwordResetEmail {
 			do {
 				let map: [String:Any] = ["fullName":alias.address, "uri":uri, "authToken":authToken]
 				let ctx = MustacheEvaluationContext(templatePath: emailTemplate, map: map)
@@ -187,25 +185,25 @@ public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 	}
 	
 	public func getDB() throws -> Database<PostgresDatabaseConfiguration> {
-		guard let db = try globalConfig.database?.crud() else {
+		guard let db = try Config.globalConfig.database?.crud() else {
 			throw SAuthError(description: "Database is not configured.")
 		}
 		return db
 	}
 	public func getServerPublicKey() throws -> PEMKey {
-		return globalConfig.server.serverPublicKey
+		return Config.globalConfig.server.serverPublicKey
 	}
 	public func getServerPrivateKey() throws -> PEMKey {
-		return globalConfig.server.serverPrivateKey
+		return Config.globalConfig.server.serverPrivateKey
 	}
 	public func getPushConfigurationName(forType: String) throws -> String {
-		guard let _ = globalConfig.notifications else {
+		guard let _ = Config.globalConfig.notifications else {
 			throw SAuthError(description: "iOS notifications are not configured.")
 		}
 		return sauthNotificationsConfigurationName
 	}
 	public func getPushConfigurationTopic(forType: String) throws -> String {
-		guard let topic = globalConfig.notifications?.topic else {
+		guard let topic = Config.globalConfig.notifications?.topic else {
 			throw SAuthError(description: "iOS notifications are not configured.")
 		}
 		return topic
@@ -215,19 +213,21 @@ public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		var path: String?
 		switch key {
 		case .passwordResetForm:
-			path = globalConfig.templates?.passwordResetForm
+			path = Config.globalConfig.templates?.passwordResetForm
 		case .passwordResetOk:
-			path = globalConfig.templates?.passwordResetOk
+			path = Config.globalConfig.templates?.passwordResetOk
 		case .passwordResetError:
-			path = globalConfig.templates?.passwordResetError
+			path = Config.globalConfig.templates?.passwordResetError
 		case .passwordResetEmail:
-			path = globalConfig.templates?.passwordResetEmail
+			path = Config.globalConfig.templates?.passwordResetEmail
 		case .accountValidationEmail:
-			path = globalConfig.templates?.accountValidationEmail
+			path = Config.globalConfig.templates?.accountValidationEmail
 		case .accountValidationError:
-			path = globalConfig.templates?.accountValidationError
+			path = Config.globalConfig.templates?.accountValidationError
 		case .accountValidationOk:
-			path = globalConfig.templates?.accountValidationOk
+			path = Config.globalConfig.templates?.accountValidationOk
+		case .sauthInitForm:
+			path = Config.globalConfig.templates?.sauthInitForm
 		}
 		guard let p = path else {
 			throw SAuthError(description: "The template \(key) is not defined.")
@@ -239,15 +239,15 @@ public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		var path: String?
 		switch key {
 		case .oauthRedirect:
-			path = globalConfig.uris.oauthRedirect
+			path = Config.globalConfig.uris.oauthRedirect
 		case .passwordReset:
-			path = globalConfig.uris.passwordReset
+			path = Config.globalConfig.uris.passwordReset
 		case .accountValidate:
-			path = globalConfig.uris.accountValidate
+			path = Config.globalConfig.uris.accountValidate
 		case .profilePicsFSPath:
-			path = globalConfig.uris.profilePicsFSPath
+			path = Config.globalConfig.uris.profilePicsFSPath
 		case .profilePicsWebPath:
-			path = globalConfig.uris.profilePicsWebPath
+			path = Config.globalConfig.uris.profilePicsWebPath
 		}
 		guard let p = path else {
 			throw SAuthError(description: "The URI \(key) is not defined.")
