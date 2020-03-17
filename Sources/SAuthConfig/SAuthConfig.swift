@@ -74,7 +74,8 @@ extension Account {
 // !FIX! config
 let tokenExpirationSeconds = 31536000
 
-public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
+public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
+	
 	public typealias DBConfig = PostgresDatabaseConfiguration
 	public typealias MetaType = AccountMetaData
 	
@@ -82,6 +83,10 @@ public struct SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		
 	}
 	
+	public func created(account: Account<AccountMetaData>, alias: AliasBrief) {
+		//nop
+	}
+
 	public func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
 		var roles = ["user"]
 		do {
