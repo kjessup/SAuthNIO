@@ -74,7 +74,7 @@ extension Account {
 // !FIX! config
 let tokenExpirationSeconds = 31536000
 
-public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
+open class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 	
 	public typealias DBConfig = PostgresDatabaseConfiguration
 	public typealias MetaType = AccountMetaData
@@ -83,11 +83,11 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		
 	}
 	
-	public func created(account: Account<AccountMetaData>, alias: AliasBrief) {
+	open func created(account: Account<AccountMetaData>, alias: AliasBrief) {
 		//nop
 	}
 
-	public func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
+	open func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
 		var roles = ["user"]
 		do {
 			let db = try getDB()
@@ -116,7 +116,7 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 						   extra: extra)
 	}
 	
-	public func sendEmailValidation(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
+	open func sendEmailValidation(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
 		guard let smtp = Config.globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
@@ -142,7 +142,7 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		try email.send()
 	}
 	
-	public func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
+	open func sendEmailPasswordReset(authToken: String, account: Account<MetaType>, alias: AliasBrief) throws {
 		guard let smtp = Config.globalConfig.smtp else {
 			throw SAuthError(description: "SMTP is not configured.")
 		}
@@ -167,7 +167,7 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		try email.send()
 	}
 	
-	public func plainResetEmailBody(fullName: String, uri: String, authToken: String) -> String {
+	open func plainResetEmailBody(fullName: String, uri: String, authToken: String) -> String {
 		return """
 		Hello, \(fullName). Here is your requested password reset link:
 		\(uri)/\(authToken)
@@ -179,7 +179,7 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		"""
 	}
 	
-	public func plainValidateAccountBody(address: String, uri: String, authToken: String) -> String {
+	open func plainValidateAccountBody(address: String, uri: String, authToken: String) -> String {
 		return """
 		Hello, an account was created for this address "\(address)". Follow this link to validate your account:
 		\(uri)/\(authToken)
@@ -189,32 +189,32 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		"""
 	}
 	
-	public func getDB() throws -> Database<PostgresDatabaseConfiguration> {
+	open func getDB() throws -> Database<PostgresDatabaseConfiguration> {
 		guard let db = try Config.globalConfig.database?.crud() else {
 			throw SAuthError(description: "Database is not configured.")
 		}
 		return db
 	}
-	public func getServerPublicKey() throws -> PEMKey {
+	open func getServerPublicKey() throws -> PEMKey {
 		return Config.globalConfig.server.serverPublicKey
 	}
-	public func getServerPrivateKey() throws -> PEMKey {
+	open func getServerPrivateKey() throws -> PEMKey {
 		return Config.globalConfig.server.serverPrivateKey
 	}
-	public func getPushConfigurationName(forType: String) throws -> String {
+	open func getPushConfigurationName(forType: String) throws -> String {
 		guard let _ = Config.globalConfig.notifications else {
 			throw SAuthError(description: "iOS notifications are not configured.")
 		}
 		return sauthNotificationsConfigurationName
 	}
-	public func getPushConfigurationTopic(forType: String) throws -> String {
+	open func getPushConfigurationTopic(forType: String) throws -> String {
 		guard let topic = Config.globalConfig.notifications?.topic else {
 			throw SAuthError(description: "iOS notifications are not configured.")
 		}
 		return topic
 	}
 	
-	public func getTemplatePath(_ key: TemplateKey) throws -> String {
+	open func getTemplatePath(_ key: TemplateKey) throws -> String {
 		var path: String?
 		switch key {
 		case .passwordResetForm:
@@ -240,7 +240,7 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		return "\(templatesDir)\(p)"
 	}
 	
-	public func getURI(_ key: URIKey) throws -> String {
+	open func getURI(_ key: URIKey) throws -> String {
 		var path: String?
 		switch key {
 		case .oauthRedirect:
@@ -259,7 +259,7 @@ public class SAuthConfigProvider: SAuthNIOLib.SAuthConfigProvider {
 		}
 		return p
 	}
-	public func metaFrom(request: AccountRegisterRequest) -> MetaType? {
+	open func metaFrom(request: AccountRegisterRequest) -> MetaType? {
 		var meta = AccountMetaData()
 		meta.fullName = request.fullName
 		return meta
