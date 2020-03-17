@@ -84,8 +84,7 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 		
 			$0.GET.account.list(sAuthHandlers.listAccounts).json()
 			$0.POST.account.delete.decode(DeleteAccountRequest.self, sAuthHandlers.deleteAccount).json()
-			$0.POST.account.register.decode(AccountRegisterRequest.self, sAuthHandlers.registerUser)
-				.map(sAuthHandlers.register).json()			
+			$0.POST.account.register.decode(AccountRegisterRequest.self, sAuthHandlers.registerUser).json()			
 		}
 		
 		let firstAccountRoutes = try root().initSAuth.statusCheck {

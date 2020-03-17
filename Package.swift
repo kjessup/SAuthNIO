@@ -7,7 +7,9 @@ let package = Package(
 		.macOS(.v10_15)
 	],
 	products: [
-		.executable(name: "SAuthNIO", targets: ["SAuthNIO"])
+		.executable(name: "SAuthNIO", targets: ["SAuthNIO"]),
+		.library(name: "SAuthConfig", targets: ["SAuthConfig"]),
+		.library(name: "SAuthRoutes", targets: ["SAuthRoutes"])
 	],
 	dependencies: [
 		.package(url: "https://github.com/PerfectlySoft/Perfect-NIO.git", .branch("master")),

@@ -163,7 +163,7 @@ class SAuthTests: XCTestCase {
 			}
 			struct Config: Codable {
 				let item1: ConfigItem1
-				let item2: ConfigItem2
+				let item2: ConfigItem2?
 				let items1: [ConfigItem1]
 				let items2: [ListItem]
 			}
@@ -198,9 +198,9 @@ class SAuthTests: XCTestCase {
 			XCTAssertEqual(item1.ival, 42)
 			XCTAssertEqual(item1.bval, true)
 			let item2 = config.item2
-			XCTAssertEqual(item2.name, "bar")
-			XCTAssertEqual(item2.ival, 42)
-			XCTAssertEqual(item2.bval, true)
+			XCTAssertEqual(item2?.name, "bar")
+			XCTAssertEqual(item2?.ival, 42)
+			XCTAssertEqual(item2?.bval, true)
 			let items1 = config.items1
 			XCTAssertEqual(items1.count, 2)
 			XCTAssertEqual(items1[0].name, "foo")
