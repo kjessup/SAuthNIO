@@ -18,13 +18,13 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 
 	//	routes.add(TRoute(method: .get, uri: "/api/v1/oauth/upgrade/{provider}/{token}", handler: oauthHandlers.oauthLoginHandler))
 	//	routes.add(method: .get, uri: "/api/v1/oauth/return/{provider}", handler: oauthHandlers.oauthReturnHandler)
-	let oauthRoutes = try root().GET.oauth.dir(type: HTTPOutput.self) {
+	let oauthRoutes = try root().GET.oauth.dir(type: HTTPOutput.self) {[
 		$0.upgrade
 			.wild { $1 }
-			.wild(OAuthProviderAndToken.init).map(oauthHandlers.oauthLoginHandler).json()
+			.wild(OAuthProviderAndToken.init).map(oauthHandlers.oauthLoginHandler).json(),
 		$0.return
 			.wild(name: "provider").map(oauthHandlers.oauthReturnHandler)
-	}
+	]}
 	
 	let sAuthHandlers = SAuthHandlers(sauth.provider)
 	let serverPublicKeyStr = try sauth.provider.getServerPublicKey().publicKeyString!
@@ -34,19 +34,19 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 	let enable = Config.globalConfig.enable
 	let apiRoutes: FullRoute
 	do {
-		let apiGetRoutes = try root().GET.dir(type: HTTPOutput.self) {
-			$0.login.decode(AuthAPI.LoginRequest.self, sAuthHandlers.login).json()
+		let apiGetRoutes = try root().GET.dir(type: HTTPOutput.self) {[
+			$0.login.decode(AuthAPI.LoginRequest.self, sAuthHandlers.login).json(),
 			$0.passreset.decode(AuthAPI.PasswordResetRequest.self, sAuthHandlers.initiatePasswordReset).json()
-		}
+		]}
 
-		let apiPostRoutes = try root().POST.dir(type: HTTPOutput.self) {
+		let apiPostRoutes = try root().POST.dir(type: HTTPOutput.self) {[
 			$0.passreset.decode(AuthAPI.PasswordResetCompleteRequest.self, sAuthHandlers.completePasswordReset).json()
-		}
+		]}
 		
-		let apiPublicKeyRoutes: FullRoute = try root().GET.dir {
+		let apiPublicKeyRoutes: FullRoute = try root().GET.dir {[
 			$0.key {
 				TextOutput(serverPublicKeyStr) as HTTPOutput
-			}
+			},
 			$0.jwk {
 				_ -> HTTPOutput in
 				guard let r = serverPublicKeyJWKStr else {
@@ -55,13 +55,13 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 				return TextOutput(r,
 								  headers: [("Content-Type", "application/json")])
 			}
-		}
+		]}
 		
-		let authenticatedRoutes = try root().a(sAuthHandlers.authenticated).dir(type: HTTPOutput.self) {
-			$0.GET.mydata(sAuthHandlers.getMeMeta).json()
-			$0.GET.me(sAuthHandlers.getMe).json()
+		let authenticatedRoutes = try root().a(sAuthHandlers.authenticated).dir(type: HTTPOutput.self) {[
+			$0.GET.mydata(sAuthHandlers.getMeMeta).json(),
+			$0.GET.me(sAuthHandlers.getMe).json(),
 			$0.POST.mobile.add.decode(AuthAPI.AddMobileDeviceRequest.self, sAuthHandlers.addMobileDevice).json()
-		}
+		]}
 		
 		var routes: [FullRoute] = [
 			apiGetRoutes,
@@ -70,22 +70,22 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 			authenticatedRoutes]
 		
 		// Routes that can be disabled
-		let userSelfRegistrationRoutes = try root().POST.dir(type: HTTPOutput.self) {
+		let userSelfRegistrationRoutes = try root().POST.dir(type: HTTPOutput.self) {[
 			$0.register.decode(AuthAPI.RegisterRequest.self, sAuthHandlers.register).json()
-		}
+		]}
 		
-		let userProfileUpdateRoutes = try root().POST.a(sAuthHandlers.authenticated).dir(type: HTTPOutput.self) {
-			$0.profile.update.decode(UpdateProfilePicRequest.self, sAuthHandlers.updateProfilePic).json()
+		let userProfileUpdateRoutes = try root().POST.a(sAuthHandlers.authenticated).dir(type: HTTPOutput.self) {[
+			$0.profile.update.decode(UpdateProfilePicRequest.self, sAuthHandlers.updateProfilePic).json(),
 			$0.mydata.decode(P.MetaType.self, sAuthHandlers.setMeMeta).json()
-		}
+		]}
 		
 		let authenticatedAdminRoutes = try root().a(sAuthHandlers.authenticated)
-			.statusCheck { $0.account.isAdmin ? .ok : .badRequest }.dir(type: HTTPOutput.self) {
+			.statusCheck { $0.account.isAdmin ? .ok : .badRequest }.dir(type: HTTPOutput.self) {[
 		
-			$0.GET.account.list(sAuthHandlers.listAccounts).json()
-			$0.POST.account.delete.decode(DeleteAccountRequest.self, sAuthHandlers.deleteAccount).json()
+			$0.GET.account.list(sAuthHandlers.listAccounts).json(),
+			$0.POST.account.delete.decode(DeleteAccountRequest.self, sAuthHandlers.deleteAccount).json(),
 			$0.POST.account.register.decode(AccountRegisterRequest.self, sAuthHandlers.registerUser).json()			
-		}
+		]}
 		
 		let firstAccountRoutes = try root().initSAuth.statusCheck {
 			let db = try sauth.provider.getDB()
@@ -93,16 +93,16 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 				return .notFound
 			}
 			return .ok
-		}.dir(type: HTTPOutput.self) {
+		}.dir(type: HTTPOutput.self) {[
 			$0.GET.map {
 				_ -> HTTPOutput in
 				guard let tempForm = try? sauth.provider.getTemplatePath(.sauthInitForm) else {
 					return ErrorOutput(status: .badRequest, description: "Templates not configured.")
 				}
 				return try MustacheOutput(templatePath: tempForm, inputs: [:], contentType: "text/html")
-			}
+			},
 			$0.POST.decode(AccountRegisterRequest.self, sAuthHandlers.initSAuth).json()
-		}
+		]}
 		
 		if enable?.userSelfRegistration ?? true {
 			print("userSelfRegistration true")
@@ -127,16 +127,16 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 		apiRoutes = try root().dir(routes)
 	}
 	
-	let pwResetWebRoutes = try root().pwreset.dir(type: HTTPOutput.self) {
-		$0.GET.wild(name: "token").map(sAuthHandlers.pwResetWeb)
+	let pwResetWebRoutes = try root().pwreset.dir(type: HTTPOutput.self) {[
+		$0.GET.wild(name: "token").map(sAuthHandlers.pwResetWeb),
 		$0.POST.complete.decode(AuthAPI.PasswordResetCompleteRequest.self, sAuthHandlers.pwResetWebComplete)
-	}
+	]}
 	
 	let accountValidateRoutes = root().GET.validate.wild(name: "token").map(sAuthHandlers.accountValidateWeb)
 	
 	let doReadyCheck = enable?.readinessCheck ?? false
-	let healthRoutes = try root().GET.health.dir(type: HTTPOutput.self) {
-		$0.live { _ -> HTTPOutput in TextOutput("ok") }
+	let healthRoutes = try root().GET.health.dir(type: HTTPOutput.self) {[
+		$0.live { _ -> HTTPOutput in TextOutput("ok") },
 		$0.ready {
 			_ -> HTTPOutput in
 			if doReadyCheck {
@@ -144,7 +144,7 @@ public func sauthRoutes<P: SAuthNIOLib.SAuthConfigProvider>(_ sauth: SAuth<P>) t
 			}
 			return TextOutput("ok")
 		}
-	}
+	]}
 	let routes = try root().dir(apiRoutes,
 								pwResetWebRoutes,
 								accountValidateRoutes,

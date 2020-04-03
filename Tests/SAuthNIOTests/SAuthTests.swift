@@ -91,6 +91,10 @@ let jwk = """
 """
 
 struct SAuthTestDBProvider: SAuthNIOLib.SAuthConfigProvider {
+	func created(account: Account<AccountMetaData>, alias: AliasBrief) {
+		
+	}
+	
 	func makeClaim(_ address: String, accountId: UUID?) -> TokenClaim {
 		let now = Date().sauthTimeInterval
 		return TokenClaim(issuer: "sauth",
@@ -139,7 +143,7 @@ class SAuthTests: XCTestCase {
 			let jwk = try JWK(key: pk)
 			let d = try JSONEncoder().encode(jwk)
 			let s = String(data: d, encoding: .utf8)
-			print(s)
+			print(s!)
 		} catch {
 			XCTFail("\(error)")
 		}
