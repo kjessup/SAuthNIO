@@ -13,7 +13,7 @@ let package = Package(
 	],
 	dependencies: [
 		.package(url: "https://github.com/PerfectlySoft/Perfect-NIO.git", .branch("master")),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-Notifications.git", from: "4.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-Notifications.git", from: "5.0.0"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-PostgreSQL.git", from: "4.0.0"),
 		.package(url: "https://github.com/kjessup/SAuthNIOLib.git", .branch("master")),
 	],
